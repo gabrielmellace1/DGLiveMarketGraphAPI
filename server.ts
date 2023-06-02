@@ -19,6 +19,20 @@ const fetchData = async (query: string) => {
   }
 };
 
+interface Transaction {
+  transactionId: string;
+  hash: string;
+  timestamp: string;
+  type: string;
+  blockId: string;
+  sellerId: string;
+  price: string;
+  nftAddress: string;
+  tokenId: string;
+  buyerId: string;
+  recipientId: string;
+}
+
 const fetchTransactions = async ({
   start,
   count,
@@ -29,7 +43,7 @@ const fetchTransactions = async ({
   count: number;
   order: string;
   orderBy?: string;
-}) => {
+}): Promise<Transaction> => {
   const query = `
     {
       transactions(first: ${count}, skip: ${start}, orderBy: ${orderBy}, orderDirection: ${order}) {
@@ -71,7 +85,7 @@ const fetchTransactions = async ({
       buyerId: transaction.buyer ? transaction.buyer.id : "None",
       recipientId: transaction.recipient ? transaction.recipient.id : "None",
     };
-  });
+  }) as Transaction;
 };
 
 const fetchAllTransactions = async ({
@@ -83,7 +97,7 @@ const fetchAllTransactions = async ({
   count?: number;
   order?: string;
 }) => {
-  const transactions = await fetchTransactions({ start, count, order });
+  const transactions: any = await fetchTransactions({ start, count, order });
 
   // If the number of transactions is equal to the limit
   // then there might be more transactions
@@ -158,6 +172,33 @@ const fetchTotalNftsForSale = async (start = 0, count = 1000): Promise<any> => {
   return nfts.length;
 };
 
+const fetchTopSellingNftAddresses = async ({
+  count = 10,
+  order = "desc",
+}: {
+  count: number;
+  order: string;
+}): Promise<any> => {
+  const query = `
+    {
+      nfts(first: ${count}, orderBy: totalSales, orderDirection: ${order}) {
+        id
+        totalSales
+        nftAddress {
+          id
+        }
+      }
+    }`;
+
+  const data = await fetchData(query);
+  return data.nfts.map((nft: any) => {
+    return {
+      nftAddress: nft.nftAddress.id,
+      totalSales: nft.totalSales,
+    };
+  });
+};
+
 const app = express();
 
 app.get("/", async (req, res) => {
@@ -196,6 +237,17 @@ app.get("/nftsForSale", async (req, res) => {
 app.get("/totalNftsForSale", async (req, res) => {
   const totalNftsForSale = await fetchTotalNftsForSale();
   res.json({ total: totalNftsForSale });
+});
+
+app.get("/topSellingNftAddresses", async (req: Request, res: Response) => {
+  const count = Number(req.query.count) || 10;
+  const order = typeof req.query.order === "string" ? req.query.order : "desc";
+
+  const topSellingNftAddresses = await fetchTopSellingNftAddresses({
+    count,
+    order,
+  });
+  res.json(topSellingNftAddresses);
 });
 
 app.listen(PORT || 3000, () => {
