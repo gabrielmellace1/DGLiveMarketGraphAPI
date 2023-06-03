@@ -47,6 +47,20 @@ interface UserTransaction {
   price: string;
   timestamp: string;
 }
+interface NftAddressInfo {
+  nftAddress: string;
+  totalSales: number;
+  totalRevenue: string;
+  nfts: Array<string>;
+}
+
+interface UserInfo {
+  userId: string;
+  totalSales: number;
+  totalRevenue: string;
+  totalSpent: string;
+  nftsForSale: Array<string>;
+}
 
 const fetchTransactions = async ({
   start,
@@ -169,6 +183,50 @@ const fetchUserTransactions = async ({
   });
 };
 
+const fetchNFTTransactions = async (
+  nftAddress: string,
+  tokenId: string
+): Promise<any> => {
+  const nftId = `${nftAddress}-${tokenId}`;
+
+  const query = `
+  {
+    nft(id: "${nftId}") {
+      id
+      tokenId
+      currentPrice
+      forSale
+      transactions(first:10, orderBy: timestamp, orderDirection: desc) {
+        id
+        hash
+        type
+        timestamp
+        price
+        buyer {
+          id
+        }
+        seller {
+          id
+        }
+      }
+    }
+  }`;
+
+  const data = await fetchData(query);
+
+  return data.nft.transactions.map((transaction: any) => {
+    return {
+      transactionId: transaction.id,
+      transactionHash: transaction.hash,
+      transactionType: transaction.type,
+      transactionTimestamp: transaction.timestamp,
+      transactionPrice: transaction.price,
+      buyerId: transaction.buyer ? transaction.buyer.id : "None",
+      sellerId: transaction.seller ? transaction.seller.id : "None",
+    };
+  });
+};
+
 const fetchNftsForSale = async (
   start = 0,
   count = 1000,
@@ -277,6 +335,57 @@ const fetchTopUserSellers = async ({
   });
 };
 
+const fetchNftAddressInfo = async (
+  nftAddress: string
+): Promise<NftAddressInfo> => {
+  const query = `
+  {
+    nftaddress(id: "${nftAddress}") {
+      id
+      totalSales
+      totalRevenue
+      nfts {
+        tokenId
+      }
+    }
+  }
+  `;
+
+  const data = await fetchData(query);
+
+  return {
+    nftAddress: data.nftaddress.id,
+    totalSales: data.nftaddress.totalSales,
+    totalRevenue: data.nftaddress.totalRevenue,
+    nfts: data.nftaddress.nfts.map((nft: any) => nft.tokenId),
+  };
+};
+
+const fetchUserInfo = async (userId: string): Promise<UserInfo> => {
+  const query = `
+  {
+    user(id: "${userId}") {
+      id
+      totalSales
+      totalRevenue
+      totalSpent
+      nftsForSale {
+        id
+      }
+    }
+  }`;
+
+  const data = await fetchData(query);
+
+  return {
+    userId: data.user.id,
+    totalSales: data.user.totalSales,
+    totalRevenue: data.user.totalRevenue,
+    totalSpent: data.user.totalSpent,
+    nftsForSale: data.user.nftsForSale.map((nft: any) => nft.id),
+  };
+};
+
 const app = express();
 
 app.get("/", async (req, res) => {
@@ -287,7 +396,10 @@ app.get("/", async (req, res) => {
   <p>/fetchAllTransactions?start=0</p>
   <p>/nftsForSale?start=0&count=5&order=desc</p>
   <p>/totalNftsForSale?start=0&count=5</p>
-
+  <p>/userTransactions?id=USER_ID&count=10&order=desc</p>
+  <p>/topSellingNftAddresses?count=10&order=desc</p>
+  <p>/topUserSellers?count=10&order=desc</p>
+  <p>/nftTransactions?nftAddress=NFT_ADDRESS&tokenId=TOKEN_ID</p>
   `;
   res.send(routes);
 });
@@ -308,7 +420,8 @@ app.get("/fetchAllTransactions", async (req, res) => {
 });
 
 app.get("/userTransactions", async (req: Request, res: Response) => {
-  const id = req.query.id as string;
+  let id = req.query.id as string;
+  id = id.toLowerCase();
   const count = Number(req.query.count) || 10;
   const order = req.query.order === "asc" ? "asc" : "desc";
 
@@ -324,6 +437,27 @@ app.get("/userTransactions", async (req: Request, res: Response) => {
       order,
     });
     res.json(userTransactions);
+  } catch (error) {
+    res
+      .status(500)
+      .send(
+        error instanceof Error ? error.message : "An unexpected error occurred"
+      );
+  }
+});
+
+app.get("/nftTransactions", async (req: Request, res: Response) => {
+  const nftAddress = req.query.nftAddress as string;
+  const tokenId = req.query.tokenId as string;
+
+  if (!nftAddress || !tokenId) {
+    res.status(400).send("Missing NFT address or token ID");
+    return;
+  }
+
+  try {
+    const nftTransactions = await fetchNFTTransactions(nftAddress, tokenId);
+    res.json(nftTransactions);
   } catch (error) {
     res
       .status(500)
@@ -363,6 +497,46 @@ app.get("/topUserSellers", async (req: Request, res: Response) => {
     order,
   });
   res.json(topUserSellers);
+});
+
+app.get("/getNftAddress", async (req: Request, res: Response) => {
+  let nftAddress = req.query.nftAddress as string;
+  nftAddress = nftAddress.toLocaleLowerCase();
+  if (!nftAddress) {
+    res.status(400).send("Missing NFT Address");
+    return;
+  }
+
+  try {
+    const nftAddressInfo = await fetchNftAddressInfo(nftAddress);
+    res.json(nftAddressInfo);
+  } catch (error) {
+    res
+      .status(500)
+      .send(
+        error instanceof Error ? error.message : "An unexpected error occurred"
+      );
+  }
+});
+
+app.get("/getUser", async (req: Request, res: Response) => {
+  let userId = req.query.userId as string;
+  userId = userId.toLocaleLowerCase();
+  if (!userId) {
+    res.status(400).send("Missing User ID");
+    return;
+  }
+
+  try {
+    const userInfo = await fetchUserInfo(userId);
+    res.json(userInfo);
+  } catch (error) {
+    res
+      .status(500)
+      .send(
+        error instanceof Error ? error.message : "An unexpected error occurred"
+      );
+  }
 });
 
 app.listen(PORT || 3000, () => {
