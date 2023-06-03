@@ -32,6 +32,21 @@ interface Transaction {
   buyerId: string;
   recipientId: string;
 }
+interface UserTransactionsParams {
+  id: string;
+  count?: number;
+  order?: "asc" | "desc";
+}
+
+interface UserTransaction {
+  action: string;
+  hash: string;
+  nftAddressId: string;
+  nftId: string;
+  tokenId: string;
+  price: string;
+  timestamp: string;
+}
 
 const fetchTransactions = async ({
   start,
@@ -114,6 +129,44 @@ const fetchAllTransactions = async ({
   }
 
   return transactions;
+};
+
+const fetchUserTransactions = async ({
+  id,
+  count = 10,
+  order = "desc",
+}: UserTransactionsParams): Promise<UserTransaction[]> => {
+  const query = `
+  {
+    user(id: "${id}") {
+      transactions(first:${count}, orderBy: timestamp, orderDirection: ${order}) {
+        action
+        hash
+        nftAddress {
+          id
+        }
+        nft {
+          id
+          tokenId
+        }
+        price
+        timestamp
+      }
+    }
+  }`;
+
+  const data = await fetchData(query);
+  return data.user.transactions.map((transaction: any) => {
+    return {
+      action: transaction.action,
+      hash: transaction.hash,
+      nftAddressId: transaction.nftAddress.id,
+      nftId: transaction.nft.id,
+      tokenId: transaction.nft.tokenId,
+      price: transaction.price,
+      timestamp: transaction.timestamp,
+    };
+  });
 };
 
 const fetchNftsForSale = async (
@@ -252,6 +305,32 @@ app.get("/fetchAllTransactions", async (req, res) => {
   const start = Number(req.query.start) || 0;
   const transactions = await fetchAllTransactions({ start });
   res.json(transactions);
+});
+
+app.get("/userTransactions", async (req: Request, res: Response) => {
+  const id = req.query.id as string;
+  const count = Number(req.query.count) || 10;
+  const order = req.query.order === "asc" ? "asc" : "desc";
+
+  if (!id) {
+    res.status(400).send("Missing user ID");
+    return;
+  }
+
+  try {
+    const userTransactions = await fetchUserTransactions({
+      id,
+      count,
+      order,
+    });
+    res.json(userTransactions);
+  } catch (error) {
+    res
+      .status(500)
+      .send(
+        error instanceof Error ? error.message : "An unexpected error occurred"
+      );
+  }
 });
 
 app.get("/nftsForSale", async (req, res) => {
