@@ -180,21 +180,46 @@ const fetchTopSellingNftAddresses = async ({
   order: string;
 }): Promise<any> => {
   const query = `
-    {
-      nfts(first: ${count}, orderBy: totalSales, orderDirection: ${order}) {
-        id
-        totalSales
-        nftAddress {
-          id
-        }
-      }
-    }`;
+  {
+    nftaddresses(first: 10, orderBy:totalRevenue, orderDirection: desc) {
+      id
+      totalRevenue
+      totalSales
+    }
+  }`;
 
   const data = await fetchData(query);
-  return data.nfts.map((nft: any) => {
+  return data.nftaddresses.map((nft: any) => {
     return {
-      nftAddress: nft.nftAddress.id,
+      nftAddress: nft.id,
       totalSales: nft.totalSales,
+      totalRevenue: nft.totalRevenue,
+    };
+  });
+};
+
+const fetchTopUserSellers = async ({
+  count = 10,
+  order = "desc",
+}: {
+  count: number;
+  order: string;
+}): Promise<any> => {
+  const query = `
+  {
+    users(first: 10, orderBy:totalRevenue, orderDirection: desc) {
+      id
+      totalRevenue
+      totalSales
+    }
+  }`;
+
+  const data = await fetchData(query);
+  return data.users.map((user: any) => {
+    return {
+      wallet: user.id,
+      totalSales: user.totalSales,
+      totalRevenue: user.totalRevenue,
     };
   });
 };
@@ -248,6 +273,17 @@ app.get("/topSellingNftAddresses", async (req: Request, res: Response) => {
     order,
   });
   res.json(topSellingNftAddresses);
+});
+
+app.get("/topUserSellers", async (req: Request, res: Response) => {
+  const count = Number(req.query.count) || 10;
+  const order = typeof req.query.order === "string" ? req.query.order : "desc";
+
+  const topUserSellers = await fetchTopUserSellers({
+    count,
+    order,
+  });
+  res.json(topUserSellers);
 });
 
 app.listen(PORT || 3000, () => {
