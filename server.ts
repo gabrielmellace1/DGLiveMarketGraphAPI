@@ -386,6 +386,40 @@ const fetchUserInfo = async (userId: string): Promise<UserInfo> => {
   };
 };
 
+const fetchUserSalesByDay = async ({
+  id,
+  startDate,
+  endDate,
+}: {
+  id: string;
+  startDate: string;
+  endDate: string;
+}): Promise<any> => {
+  const query = `
+  {
+    user(id:"${id}") {
+      salesByDay(where: {date_gte: "${startDate}", date_lte: "${endDate}"}) {
+        date {
+          day
+          month
+          year
+        }
+        totalSales
+        totalRevenue
+      }
+    }
+  }`;
+
+  const data = await fetchData(query);
+  return data.user.salesByDay.map((sale: any) => {
+    return {
+      date: sale.date,
+      totalSales: sale.totalSales,
+      totalRevenue: sale.totalRevenue,
+    };
+  });
+};
+
 const app = express();
 
 app.get("/", async (req, res) => {
@@ -537,6 +571,26 @@ app.get("/getUser", async (req: Request, res: Response) => {
         error instanceof Error ? error.message : "An unexpected error occurred"
       );
   }
+});
+
+app.get("/userSalesByDay", async (req: Request, res: Response) => {
+  let id = req.query.id as string;
+  id = id.toLocaleLowerCase();
+  const startDate = req.query.startDate as string;
+  const endDate = req.query.endDate as string;
+
+  if (!id || !startDate || !endDate) {
+    return res.status(400).json({
+      message: "Missing required parameters: 'id', 'startDate', 'endDate'.",
+    });
+  }
+
+  const userSalesByDay = await fetchUserSalesByDay({
+    id,
+    startDate,
+    endDate,
+  });
+  res.json(userSalesByDay);
 });
 
 app.listen(PORT || 3000, () => {
