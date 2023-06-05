@@ -420,6 +420,41 @@ const fetchUserSalesByDay = async ({
   });
 };
 
+const fetchNFTAddressSalesByDay = async ({
+  id,
+  startDate,
+  endDate,
+}: {
+  id: string;
+  startDate: string;
+  endDate: string;
+}): Promise<any> => {
+  const query = `
+  {
+    nftaddress(id:"${id}") {
+      salesByDay(where: {date_gte: "${startDate}", date_lte: "${endDate}"}) {
+        date {
+          day
+          month
+          year
+        }
+        totalSales
+        totalRevenue
+      }
+    }
+  }`;
+
+  const data = await fetchData(query);
+
+  return data.nftaddress.salesByDay.map((sale: any) => {
+    return {
+      date: sale.date,
+      totalSales: sale.totalSales,
+      totalRevenue: sale.totalRevenue,
+    };
+  });
+};
+
 const app = express();
 
 app.get("/", async (req, res) => {
@@ -575,7 +610,7 @@ app.get("/getUser", async (req: Request, res: Response) => {
 
 app.get("/userSalesByDay", async (req: Request, res: Response) => {
   let id = req.query.id as string;
-  id = id.toLocaleLowerCase();
+
   const startDate = req.query.startDate as string;
   const endDate = req.query.endDate as string;
 
@@ -584,13 +619,33 @@ app.get("/userSalesByDay", async (req: Request, res: Response) => {
       message: "Missing required parameters: 'id', 'startDate', 'endDate'.",
     });
   }
-
+  id = id.toLocaleLowerCase();
   const userSalesByDay = await fetchUserSalesByDay({
     id,
     startDate,
     endDate,
   });
   res.json(userSalesByDay);
+});
+
+app.get("/nftAddressSalesByDay", async (req: Request, res: Response) => {
+  let id = req.query.id as string;
+
+  const startDate = req.query.startDate as string;
+  const endDate = req.query.endDate as string;
+
+  if (!id || !startDate || !endDate) {
+    return res.status(400).json({
+      message: "Missing required parameters: 'id', 'startDate', 'endDate'.",
+    });
+  }
+  id = id.toLocaleLowerCase();
+  const nftAddressSalesByDay = await fetchNFTAddressSalesByDay({
+    id,
+    startDate,
+    endDate,
+  });
+  res.json(nftAddressSalesByDay);
 });
 
 app.listen(PORT || 3000, () => {
