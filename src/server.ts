@@ -506,33 +506,6 @@ app.get("/nftsForSale", async (req, res) => {
   res.json(nftsForSale);
 });
 
-app.get("/totalNftsForSale", async (req, res) => {
-  const totalNftsForSale = await fetchTotalNftsForSale();
-  res.json({ total: totalNftsForSale });
-});
-
-app.get("/topSellingNftAddresses", async (req: Request, res: Response) => {
-  const count = Number(req.query.count) || 10;
-  const order = typeof req.query.order === "string" ? req.query.order : "desc";
-
-  const topSellingNftAddresses = await fetchTopSellingNftAddresses({
-    count,
-    order,
-  });
-  res.json(topSellingNftAddresses);
-});
-
-app.get("/topUserSellers", async (req: Request, res: Response) => {
-  const count = Number(req.query.count) || 10;
-  const order = typeof req.query.order === "string" ? req.query.order : "desc";
-
-  const topUserSellers = await fetchTopUserSellers({
-    count,
-    order,
-  });
-  res.json(topUserSellers);
-});
-
 app.get("/getNftAddress", async (req: Request, res: Response) => {
   let nftAddress = req.query.nftAddress as string;
   nftAddress = nftAddress.toLocaleLowerCase();
