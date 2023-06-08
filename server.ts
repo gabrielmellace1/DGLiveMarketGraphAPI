@@ -455,6 +455,21 @@ const fetchNFTAddressSalesByDay = async ({
   });
 };
 
+const fetchTransactionCounter = async (): Promise<{ count: number }> => {
+  const query = `
+  {
+    transactionCounter(id:"global") {
+      count
+    }
+  }`;
+
+  const data = await fetchData(query);
+
+  return {
+    count: data.transactionCounter.count,
+  };
+};
+
 const app = express();
 
 app.get("/", async (req, res) => {
@@ -646,6 +661,19 @@ app.get("/nftAddressSalesByDay", async (req: Request, res: Response) => {
     endDate,
   });
   res.json(nftAddressSalesByDay);
+});
+
+app.get("/getTransactionCounter", async (req: Request, res: Response) => {
+  try {
+    const transactionCounter = await fetchTransactionCounter();
+    res.json(transactionCounter);
+  } catch (error) {
+    res
+      .status(500)
+      .send(
+        error instanceof Error ? error.message : "An unexpected error occurred"
+      );
+  }
 });
 
 app.listen(PORT || 3000, () => {
