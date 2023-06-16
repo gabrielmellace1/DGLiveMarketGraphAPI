@@ -93,8 +93,11 @@ const fetchTransactions = async ({
         price
         nft {
           id
-          nftAddress
+          nftAddress {
+            id
+          }
           tokenId
+          tokenURI
         }
       }
     }`;
