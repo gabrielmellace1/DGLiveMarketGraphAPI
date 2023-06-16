@@ -1,0 +1,34 @@
+{
+  "tasks": [
+    {
+      "label": "BuildRoutes",
+      "type": "shell",
+      "command": "npm run swagger",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "BuildTs",
+      "type": "shell",
+      "command": "tsc",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always"
+      },
+      "dependsOn": ["BuildRoutes"]
+    },
+
+    {
+      "label": "Build",
+      "dependsOn": ["BuildTs"]
+    }
+  ]
+}

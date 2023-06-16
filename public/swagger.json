@@ -1,0 +1,128 @@
+{
+	"components": {
+		"examples": {},
+		"headers": {},
+		"parameters": {},
+		"requestBodies": {},
+		"responses": {},
+		"schemas": {
+			"TransactionCounterRsp": {
+				"properties": {
+					"transactionCounter": {
+						"properties": {
+							"count": {
+								"type": "number",
+								"format": "double"
+							}
+						},
+						"required": [
+							"count"
+						],
+						"type": "object"
+					}
+				},
+				"required": [
+					"transactionCounter"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"DGLiveGraphResponse_TransactionCounterRsp_": {
+				"properties": {
+					"data": {
+						"$ref": "#/components/schemas/TransactionCounterRsp"
+					},
+					"message": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"data",
+					"message"
+				],
+				"type": "object",
+				"additionalProperties": false
+			}
+		},
+		"securitySchemes": {}
+	},
+	"info": {
+		"title": "dglivemarketgraphapi",
+		"version": "1.0.0",
+		"license": {
+			"name": "ISC"
+		},
+		"contact": {}
+	},
+	"openapi": "3.0.0",
+	"paths": {
+		"/transactions/counter": {
+			"get": {
+				"operationId": "FetchTransactionCounter",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DGLiveGraphResponse_TransactionCounterRsp_"
+								}
+							}
+						}
+					}
+				},
+				"description": "Gets all the transactions in the contract",
+				"tags": [
+					"Transactions"
+				],
+				"security": [],
+				"parameters": []
+			}
+		},
+		"/transactions/nftTransactions": {
+			"get": {
+				"operationId": "FetchNftTransactions",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DGLiveGraphResponse_TransactionCounterRsp_"
+								}
+							}
+						}
+					}
+				},
+				"description": "Gets nft treansactions",
+				"tags": [
+					"Transactions"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "nftAddress",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "tokenId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		}
+	},
+	"servers": [
+		{
+			"url": "/v1"
+		}
+	]
+}

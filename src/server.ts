@@ -1,6 +1,14 @@
 import axios from "axios";
-import express, { Request, Response } from "express";
+import express, {
+  Request as ExRequest,
+  Response as ExResponse,
+  NextFunction,
+} from "express";
+import swaggerUI from "swagger-ui-express";
 import dotenv from "dotenv";
+
+import { RegisterRoutes } from "./routes/routes";
+import { ValidateError } from "tsoa";
 
 dotenv.config();
 
@@ -186,49 +194,49 @@ const fetchUserTransactions = async ({
   });
 };
 
-const fetchNFTTransactions = async (
-  nftAddress: string,
-  tokenId: string
-): Promise<any> => {
-  const nftId = `${nftAddress}-${tokenId}`;
+// const fetchNFTTransactions = async (
+//   nftAddress: string,
+//   tokenId: string
+// ): Promise<any> => {
+//   const nftId = `${nftAddress}-${tokenId}`;
 
-  const query = `
-  {
-    nft(id: "${nftId}") {
-      id
-      tokenId
-      currentPrice
-      forSale
-      transactions(first:10, orderBy: timestamp, orderDirection: desc) {
-        id
-        hash
-        type
-        timestamp
-        price
-        buyer {
-          id
-        }
-        seller {
-          id
-        }
-      }
-    }
-  }`;
+//   const query = `
+//   {
+//     nft(id: "${nftId}") {
+//       id
+//       tokenId
+//       currentPrice
+//       forSale
+//       transactions(first:10, orderBy: timestamp, orderDirection: desc) {
+//         id
+//         hash
+//         type
+//         timestamp
+//         price
+//         buyer {
+//           id
+//         }
+//         seller {
+//           id
+//         }
+//       }
+//     }
+//   }`;
 
-  const data = await fetchData(query);
+//   const data = await fetchData(query);
 
-  return data.nft.transactions.map((transaction: any) => {
-    return {
-      transactionId: transaction.id,
-      transactionHash: transaction.hash,
-      transactionType: transaction.type,
-      transactionTimestamp: transaction.timestamp,
-      transactionPrice: transaction.price,
-      buyerId: transaction.buyer ? transaction.buyer.id : "None",
-      sellerId: transaction.seller ? transaction.seller.id : "None",
-    };
-  });
-};
+//   return data.nft.transactions.map((transaction: any) => {
+//     return {
+//       transactionId: transaction.id,
+//       transactionHash: transaction.hash,
+//       transactionType: transaction.type,
+//       transactionTimestamp: transaction.timestamp,
+//       transactionPrice: transaction.price,
+//       buyerId: transaction.buyer ? transaction.buyer.id : "None",
+//       sellerId: transaction.seller ? transaction.seller.id : "None",
+//     };
+//   });
+// };
 
 const fetchNftsForSale = async (
   start = 0,
@@ -475,6 +483,14 @@ const fetchTransactionCounter = async (): Promise<{ count: number }> => {
 
 const app = express();
 
+RegisterRoutes(app);
+
+app.use("/docs", swaggerUI.serve, async (_: any, res: ExResponse) => {
+  return res.send(
+    swaggerUI.generateHTML(await import("../public/swagger.json"))
+  );
+});
+
 app.get("/", async (req, res) => {
   const routes = `
   <h1>Hello from DG Live Marketplace Subgraph API!</h1>
@@ -506,7 +522,7 @@ app.get("/fetchAllTransactions", async (req, res) => {
   res.json(transactions);
 });
 
-app.get("/userTransactions", async (req: Request, res: Response) => {
+app.get("/userTransactions", async (req: ExRequest, res: ExResponse) => {
   let id = req.query.id as string;
   id = id.toLowerCase();
   const count = Number(req.query.count) || 10;
@@ -533,26 +549,26 @@ app.get("/userTransactions", async (req: Request, res: Response) => {
   }
 });
 
-app.get("/nftTransactions", async (req: Request, res: Response) => {
-  const nftAddress = req.query.nftAddress as string;
-  const tokenId = req.query.tokenId as string;
+// app.get("/nftTransactions", async (req: ExRequest, res: ExResponse) => {
+//   const nftAddress = req.query.nftAddress as string;
+//   const tokenId = req.query.tokenId as string;
 
-  if (!nftAddress || !tokenId) {
-    res.status(400).send("Missing NFT address or token ID");
-    return;
-  }
+//   if (!nftAddress || !tokenId) {
+//     res.status(400).send("Missing NFT address or token ID");
+//     return;
+//   }
 
-  try {
-    const nftTransactions = await fetchNFTTransactions(nftAddress, tokenId);
-    res.json(nftTransactions);
-  } catch (error) {
-    res
-      .status(500)
-      .send(
-        error instanceof Error ? error.message : "An unexpected error occurred"
-      );
-  }
-});
+//   try {
+//     const nftTransactions = await fetchNFTTransactions(nftAddress, tokenId);
+//     res.json(nftTransactions);
+//   } catch (error) {
+//     res
+//       .status(500)
+//       .send(
+//         error instanceof Error ? error.message : "An unexpected error occurred"
+//       );
+//   }
+// });
 
 app.get("/nftsForSale", async (req, res) => {
   const nftsForSale = await fetchNftsForSale();
@@ -564,7 +580,7 @@ app.get("/totalNftsForSale", async (req, res) => {
   res.json({ total: totalNftsForSale });
 });
 
-app.get("/topSellingNftAddresses", async (req: Request, res: Response) => {
+app.get("/topSellingNftAddresses", async (req: ExRequest, res: ExResponse) => {
   const count = Number(req.query.count) || 10;
   const order = typeof req.query.order === "string" ? req.query.order : "desc";
 
@@ -575,7 +591,7 @@ app.get("/topSellingNftAddresses", async (req: Request, res: Response) => {
   res.json(topSellingNftAddresses);
 });
 
-app.get("/topUserSellers", async (req: Request, res: Response) => {
+app.get("/topUserSellers", async (req: ExRequest, res: ExResponse) => {
   const count = Number(req.query.count) || 10;
   const order = typeof req.query.order === "string" ? req.query.order : "desc";
 
@@ -586,7 +602,7 @@ app.get("/topUserSellers", async (req: Request, res: Response) => {
   res.json(topUserSellers);
 });
 
-app.get("/getNftAddress", async (req: Request, res: Response) => {
+app.get("/getNftAddress", async (req: ExRequest, res: ExResponse) => {
   let nftAddress = req.query.nftAddress as string;
   nftAddress = nftAddress.toLocaleLowerCase();
   if (!nftAddress) {
@@ -606,7 +622,7 @@ app.get("/getNftAddress", async (req: Request, res: Response) => {
   }
 });
 
-app.get("/getUser", async (req: Request, res: Response) => {
+app.get("/getUser", async (req: ExRequest, res: ExResponse) => {
   let userId = req.query.userId as string;
   userId = userId.toLocaleLowerCase();
   if (!userId) {
@@ -626,7 +642,7 @@ app.get("/getUser", async (req: Request, res: Response) => {
   }
 });
 
-app.get("/userSalesByDay", async (req: Request, res: Response) => {
+app.get("/userSalesByDay", async (req: ExRequest, res: ExResponse) => {
   let id = req.query.id as string;
 
   const startDate = req.query.startDate as string;
@@ -646,7 +662,7 @@ app.get("/userSalesByDay", async (req: Request, res: Response) => {
   res.json(userSalesByDay);
 });
 
-app.get("/nftAddressSalesByDay", async (req: Request, res: Response) => {
+app.get("/nftAddressSalesByDay", async (req: ExRequest, res: ExResponse) => {
   let id = req.query.id as string;
 
   const startDate = req.query.startDate as string;
@@ -666,17 +682,39 @@ app.get("/nftAddressSalesByDay", async (req: Request, res: Response) => {
   res.json(nftAddressSalesByDay);
 });
 
-app.get("/getTransactionCounter", async (req: Request, res: Response) => {
-  try {
-    const transactionCounter = await fetchTransactionCounter();
-    res.json(transactionCounter);
-  } catch (error) {
-    res
-      .status(500)
-      .send(
-        error instanceof Error ? error.message : "An unexpected error occurred"
-      );
+// app.get("/getTransactionCounter", async (req: ExRequest, res: ExResponse) => {
+//   try {
+//     const transactionCounter = await fetchTransactionCounter();
+//     res.json(transactionCounter);
+//   } catch (error) {
+//     res
+//       .status(500)
+//       .send(
+//         error instanceof Error ? error.message : "An unexpected error occurred"
+//       );
+//   }
+// });
+
+app.use(function errorHandler(
+  err: unknown,
+  req: ExRequest,
+  res: ExResponse,
+  next: NextFunction
+): ExResponse | void {
+  if (err instanceof ValidateError) {
+    console.warn(`Caught Validation Error for ${req.path}:`, err.fields);
+    return res.status(422).json({
+      message: "Validation Failed",
+      details: err?.fields,
+    });
   }
+  if (err instanceof Error) {
+    return res.status(500).json({
+      message: "Internal Server Error",
+    });
+  }
+
+  next();
 });
 
 app.listen(PORT || 3000, () => {
